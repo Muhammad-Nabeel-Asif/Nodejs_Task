@@ -66,9 +66,15 @@ exports.logout = (req, res) => {
       expires: new Date(Date.now() + 10 * 100),
       httpOnly: true,
     });
-    res.status(200).json({ status: "success" });
+    res.status(200).json({
+      status: "success",
+      message: "Successfully logged out of your account",
+    });
   } catch (error) {
-    res.status(402).json({ status: "failed" });
+    res.status(402).json({
+      status: "failed",
+      message: "Can not logout if you are not logged in",
+    });
   }
 };
 
@@ -83,13 +89,21 @@ exports.protect = async (req, res, next) => {
     }
     if (!token) {
       return next(
-        new Error("You are not logged in! Please log in to get access.")
+        res.status(402).json({
+          status: "Invalid Token",
+          message: "Please provide a valid token",
+        })
       );
     }
     const decoded = await jwt.verify(token, process.env.JWT_SECRET);
     const currentUser = await User.findById(decoded.id);
     if (!currentUser) {
-      return next(new Error("The user does not exist."));
+      return next(
+        res.status(404).json({
+          status: "Not found",
+          message: "User does not exist",
+        })
+      );
     }
     req.user = currentUser;
     next();
@@ -102,10 +116,12 @@ exports.restrictTo = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
       return next(
-        new Error("You do not have permission to perform this action")
+        res.status(401).json({
+          status: "Missing roles",
+          message: "You do not have permissions to perform this action",
+        })
       );
     }
-    console.log("admin has rights");
     next();
   };
 };
